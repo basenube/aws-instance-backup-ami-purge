@@ -1,0 +1,280 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  baseNUBE, Your Data Landed. 
+  Ron Sweeney, 2018.
+  This stack includes the creation of the following AWS Resources:
+  -- Lambda Function: Backup of Instances with the tag of "Backup"
+  -- Lambda Function: Deletion of Created AMI's from Backup with a DeleteOn of the specified time duration in days.
+  -- ExecutionRole: Shared by both functions.
+  -- Shceduled Rule: Trigger for Backup function.
+  -- Scheduled Rule: Trigger for purge function.
+  -- Lambda Permissions(2): Permission to Invoke Respective Lamba Functions. 
+Parameters:
+  EnvironmentName:
+      Description: An parent resourc name that will be prefixed to resource names in console.
+      Type: String
+  DaysUntilPurge:
+       Description: How many days until you want to purge the AMI's?  Default is 7.
+       Type: String
+       Default: "7"
+Resources:
+  ISCBackupInstanceFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${EnvironmentName}_isc_backup_instances
+      Timeout: 60
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: !Sub |
+          # ISC Instance Automated AMI Backups
+          #
+          # @author ron.sweeney@integrationrequired.com
+          #
+          # This script will search for all instances having a tag with "Backup" or "backup"
+          # on it. As soon as we have the instances list, we loop through each instance
+          # and create an AMI of it. Also, it will look for a "Retention" tag key which
+          # will be used as a retention policy number in days. If there is no tag with
+          # that name, it will use a 7 days default value for each AMI.
+          #
+          # After creating the AMI it creates a "DeleteOn" tag on the AMI indicating when
+          # it will be deleted using the Retention value and another Lambda function 
+  
+          import boto3
+          import collections
+          import datetime
+          import sys
+          import pprint
+  
+          ec = boto3.client('ec2')
+          ec2 = boto3.resource('ec2')
+  
+          def lambda_handler(event, context):
+  
+              reservations = ec.describe_instances(
+                  Filters=[
+                      {'Name': 'tag-key', 'Values': ['backup', 'Backup']},
+                  ]
+              ).get(
+                  'Reservations', []
+              )
+  
+              instances = sum(
+                  [
+                      [i for i in r['Instances']]
+                      for r in reservations
+                  ], [])
+  
+              print "Found %d instances that need backing up" % len(instances)
+      
+              to_tag = collections.defaultdict(list)
+      
+              for instance in instances:
+                  try:
+                      retention_days = [
+                          int(t.get('Value')) for t in instance['Tags']
+                          if t['Key'] == 'Retention'][0]
+                  except IndexError:
+                      retention_days = 7
+      
+                      create_time = datetime.datetime.now()
+                      create_fmt = create_time.strftime('%Y-%m-%d')
+      
+                      AMIid = ec.create_image(InstanceId=instance['InstanceId'], Name="ISC AMI Backup - " + instance['InstanceId'] + " from " + create_fmt, Description="Lambda created AMI of instance " + instance['InstanceId'] + " from " + create_fmt, NoReboot=True, DryRun=False)
+      
+                      instanceTag = ec2.Instance(instance['InstanceId'])
+                      tags = instanceTag.tags or []
+                      names = [tag.get('Value') for tag in tags if tag.get('Key') == 'Name']
+                      name = names[0] if names else None
+
+                      pprint.pprint(instance)
+                  
+                      to_tag[retention_days].append(AMIid['ImageId'])
+                  
+                      print "Retaining AMI %s of instance %s for %d days" % (
+                          AMIid['ImageId'],
+                          instance['InstanceId'],
+                          retention_days,
+                      )
+      
+              print to_tag.keys()
+      
+              for retention_days in to_tag.keys():
+                  delete_date = datetime.date.today() + datetime.timedelta(days=retention_days)
+                  delete_fmt = delete_date.strftime('%m-%d-%Y')
+                  print "Will delete %d AMIs on %s" % (len(to_tag[retention_days]), delete_fmt)
+      
+      
+                  ec.create_tags(
+                      Resources=to_tag[retention_days],
+                      Tags=[
+                          {'Key': 'DeleteOn', 'Value': delete_fmt},
+                          {'Key': 'SourceInstanceName', 'Value': name},
+                      ]
+                  )
+      Runtime: python2.7
+  ISCDeleteAMIFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${EnvironmentName}_isc_delete_amis
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 60
+      Code:
+        ZipFile: !Sub |
+          # ISC Automated AMI and Snapshot Deletion
+          
+          import boto3
+          import collections
+          import datetime
+          import time
+          import sys
+          
+          ec = boto3.client('ec2')
+          ec2 = boto3.resource('ec2')
+          images = ec2.images.filter(Owners=["self"])
+          
+          def lambda_handler(event, context):
+          
+              reservations = ec.describe_instances(
+                  Filters=[
+                      {'Name': 'tag-key', 'Values': ['backup', 'Backup']},
+                  ]
+              ).get(
+                  'Reservations', []
+              )
+          
+              instances = sum(
+                  [
+                      [i for i in r['Instances']]
+                      for r in reservations
+                  ], [])
+          
+              print "Found %d instances that need evaluated" % len(instances)
+          
+              to_tag = collections.defaultdict(list)
+          
+              date = datetime.datetime.now()
+              date_fmt = date.strftime('%Y-%m-%d')
+          
+              imagesList = []
+
+              backupSuccess = False
+
+              for instance in instances:
+                  imagecount = 0
+
+                  for image in images:
+ 
+                      if image.name.startswith('ISC AMI Backup - ' + instance['InstanceId']):
+
+                          imagecount = imagecount + 1
+          
+                          try:
+                              if image.tags is not None:
+                                  deletion_date = [
+                                      t.get('Value') for t in image.tags
+                                      if t['Key'] == 'DeleteOn'][0]
+                                  delete_date = time.strptime(deletion_date, "%m-%d-%Y")
+                          except IndexError:
+                              deletion_date = False
+                              delete_date = False
+          
+                          today_time = datetime.datetime.now().strftime('%m-%d-%Y')
+
+                          today_date = time.strptime(today_time, '%m-%d-%Y')
+          
+                          if delete_date <= today_date:
+                              imagesList.append(image.id)
+          
+
+                          if image.name.endswith(date_fmt):
+
+                              backupSuccess = True
+                              print "Latest backup from " + date_fmt + " was a success"
+          
+                  print "instance " + instance['InstanceId'] + " has " + str(imagecount) + " AMIs"
+          
+              print "============="
+          
+              print "About to process the following AMIs:"
+              print imagesList
+          
+              if backupSuccess == True:
+          
+                  myAccount = boto3.client('sts').get_caller_identity()['Account']
+                  snapshots = ec.describe_snapshots(MaxResults=1000, OwnerIds=[myAccount])['Snapshots']
+          
+
+                  for image in imagesList:
+                      print "deregistering image %s" % image
+                      amiResponse = ec.deregister_image(
+                          DryRun=False,
+                          ImageId=image,
+                      )
+          
+                      for snapshot in snapshots:
+                          if snapshot['Description'].find(image) > 0:
+                              snap = ec.delete_snapshot(SnapshotId=snapshot['SnapshotId'])
+                              print "Deleting snapshot " + snapshot['SnapshotId']
+                              print "-------------"
+          
+              else:
+                  print "No current backup found. Termination suspended."
+      Runtime: python2.7
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: ISCBackUpPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - ec2:*
+            Resource: "*"
+  ScheduledRuleforBackup: 
+    Type: "AWS::Events::Rule"
+    Properties: 
+      Description: "Scheduled Rule to Fire Backups"
+      ScheduleExpression: "cron(0 5 * * ? *)"
+      State: "ENABLED"
+      Targets: 
+        - 
+          Arn: !GetAtt ISCBackupInstanceFunction.Arn
+          Id: !Ref ISCBackupInstanceFunction
+  ScheduledRuleforDeletion: 
+    Type: "AWS::Events::Rule"
+    Properties: 
+      Description: "Scheduled Rule to Delete AMIS"
+      ScheduleExpression: "cron(0 6 * * ? *)"
+      State: "ENABLED"
+      Targets: 
+        - 
+          Arn: !GetAtt ISCDeleteAMIFunction.Arn
+          Id: !Ref ISCDeleteAMIFunction
+  PermissionForEventsToInvokeLambdaBackup: 
+    Type: "AWS::Lambda::Permission"
+    Properties: 
+      FunctionName: !Ref ISCBackupInstanceFunction
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt ScheduledRuleforBackup.Arn
+  PermissionForEventsToInvokeLambdaDelete: 
+    Type: "AWS::Lambda::Permission"
+    Properties: 
+      FunctionName: !Ref ISCDeleteAMIFunction
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt ScheduledRuleforDeletion.Arn 

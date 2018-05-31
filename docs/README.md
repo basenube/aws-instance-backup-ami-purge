@@ -1,29 +1,33 @@
 
 ![gaze](https://www.basenube.com/img/basenube.png)
 
+## Purpose
+A complete backup and purge instance solution
 
 ## Usage
-Install the module with: `npm install gaze` or place into your `package.json`
-and run `npm install`.
+You can run this from the console as a single stack or through a StackSet to reach multiple accounts (stack set compatible).
 
-```javascript
-var gaze = require('gaze');
+Your huckleberry for the CLI is here:
 
-// Watch all .js files/dirs in process.cwd()
-gaze('**/*.js', function(err, watcher) {
-  // Files have all started watching
-  // watcher === this
+```bash
+baseNUBE> aws cloudformation create-stack --stack-name myteststack --template-body file:///basenube-aws-instance-backup-ami-purge-stack.yaml --parameters ParameterKey=Parm1,ParameterValue=test1 ParameterKey=Parm2,ParameterValue=test2
+
+{
+  "StackId" : "arn:aws:cloudformation:us-west-2:123456789012:stack/myteststack/330b0120-1771-11e4-af37-50ba1b98bea6"
+}
+
 ```
 
 ## Documentation
 
-### gaze([patterns, options, callback])
+### Resource Creation
+This stack creates the following AWS Resources:
 
-* `patterns` {`String`|`Array`} File patterns to be matched
-* `options` {`Object`}
+* Backup Instance Lambda Function
+* 
 * `callback` {`Function`}
-  * `err` {`Error` | `null`}
-  * `watcher` {`Object`} Instance of the `Gaze` watcher
+* `err` {`Error` | `null`}
+* `watcher` {`Object`} Instance of the `Gaze` watcher
 
 ### Class: `gaze.Gaze`
 
@@ -36,37 +40,7 @@ var gaze = new Gaze(pattern, options, callback);
 
 #### Properties
 
-* `options` The options object passed in.
-  * `interval` {integer} Interval to pass to `fs.watchFile`
-  * `debounceDelay` {integer} Delay for events called in succession for the same
-    file/event in milliseconds
-  * `mode` {string} Force the watch mode. Either `'auto'` (default), `'watch'` (force native events), or `'poll'` (force stat polling).
-  * `cwd` {string} The current working directory to base file patterns from. Default is `process.cwd()`.
 
-#### Events
-
-* `ready(watcher)` When files have been globbed and watching has begun.
-* `all(event, filepath)` When an `added`, `changed`, `renamed`, or `deleted` event occurs.
-* `added(filepath)` When a file has been added to a watch directory.
-* `changed(filepath)` When a file has been changed.
-* `deleted(filepath)` When a file has been deleted.
-* `renamed(newPath, oldPath)` When a file has been renamed.
-* `end()` When the watcher is closed and watches have been removed.
-* `error(err)` When an error occurs.
-* `nomatch` When no files have been matched.
-
-#### Methods
-
-* `emit(event, [...])` Wrapper for `EventEmitter.emit`.
-  `added`|`changed`|`renamed`|`deleted` events will also trigger the `all` event.
-* `close()` Unwatch all files and reset the watch instance.
-* `add(patterns, callback)` Adds file(s) `patterns` to be watched.
-* `remove(filepath)` Removes a file or directory from being watched. Does not
-  recurse directories.
-* `watched()` Returns the currently watched files.
-* `relative([dir, unixify])` Returns the currently watched files with relative paths.
-  * `dir` {string} Only return relative files for this directory.
-  * `unixify` {boolean} Return paths with `/` instead of `\\` if on Windows.
 ## Release History
 * 0.1.1 - Minor fixes
 * 0.1.0 - Initial release
