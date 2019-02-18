@@ -1,56 +1,48 @@
 
 ![gaze](https://www.basenube.com/img/basenube.png)
 
-## Purpose
-A complete backup and purge instance solution
+# Terraform AWS EC2 Instance Backup an AMI Purge
+
+A Terraform plan that will deploy a set of resources that will...
+
+...search for all instances having a tag with "Backup" or "backup"
+on it. As soon as we have the instances list, we loop through each instance
+and create an AMI of it. Also, it will look for a "Retention" tag key which
+will be used as a retention policy number in days. If there is no tag with
+that name, it will use a 7 days default value for each AMI.  After creating the AMI 
+it creates a "DeleteOn" tag on the AMI indicating when it will be deleted using the Retention value and another Lambda function will...
+
+...delete that AMI.
+
+This results in a repository of AMI's with a retention for 7 days.
+
+## Resources Created
+
+  This plan includes the creation of the following AWS Resources:
+
+  -- Lambda Function: Backup of Instances with the tag of "Backup"  
+  -- Lambda Function: Deletion of Created AMI's  from Backup with a DeleteOn of the specified time duration in days.  
+  -- ExecutionRole: Shared by both functions.  
+  -- Shceduled Rule: Trigger for Backup function.  
+  -- Scheduled Rule: Trigger for purge function.  
+  -- Lambda Permissions(2): Permission to Invoke Respective Lamba Functions.  
 
 ## Usage
-You can run this from the console as a single stack or through a StackSet to reach multiple accounts (stack set compatible).
-
-Your huckleberry for the CLI is here:
 
 ```bash
-baseNUBE> aws cloudformation create-stack --stack-name myteststack --template-body file:///basenube-aws-instance-backup-ami-purge-stack.yaml --parameters ParameterKey=Parm1,ParameterValue=test1 ParameterKey=Parm2,ParameterValue=test2
-
-{
-  "StackId" : "arn:aws:cloudformation:us-west-2:123456789012:stack/myteststack/330b0120-1771-11e4-af37-50ba1b98bea6"
-}
-
+# Terraform shampoo
+terraform init
+terraform plan
+terraform apply
 ```
 
-## Documentation
+## Contributing
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
-### Resource Creation
-This stack creates the following AWS Resources:
+Please make sure to update tests as appropriate.
 
-* Backup Instance Lambda Function
-* 
-* `callback` {`Function`}
-* `err` {`Error` | `null`}
-* `watcher` {`Object`} Instance of the `Gaze` watcher
-
-### Class: `gaze.Gaze`
-
-Create a `Gaze` object by instancing the `gaze.Gaze` class.
-
-```javascript
-var Gaze = require('gaze').Gaze;
-var gaze = new Gaze(pattern, options, callback);
-```
-
-#### Properties
-
-
-## Release History
-* 0.1.1 - Minor fixes
-* 0.1.0 - Initial release
-
-## Credits
-Pretty much stole the pair of python scripts from:
-
-* [paulmillr's `chokidar`](https://github.com/paulmillr/chokidar)
-* [amasad's `sane`](https://github.com/amasad/sane)
+## Author
+Stolen gists an glued together with Stack Overflow by Ron Sweeney <ron@basenube.com>
 
 ## License
-Copyright (c) 2018 Ronnie Jay Sweeney 
-Licensed under the MIT license.
+[MIT](https://choosealicense.com/licenses/mit/)
