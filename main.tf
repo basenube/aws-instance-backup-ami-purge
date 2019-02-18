@@ -44,18 +44,27 @@ resource "aws_lambda_function" "instancebackup" {
   handler = "backup.lambda_handler"
   runtime = "python2.7"
   source_code_hash = "${base64sha256(file(data.archive_file.lambda_backup.output_path))}"
+  environment {
+      variables =
+      {
+          TFKEY = "${var.tf_key}"
+      }
+  }
 }
 
-  
-
-
 resource "aws_lambda_function" "imagepurge" {
-  function_name = "${lower(var.isc_key)}-image-purge"
+  function_name = "${lower(var.tf_key)}-image-purge"
   role = "${aws_iam_role.lambda_exec.arn}"
   filename = "${data.archive_file.lambda_purge.output_path}"
   handler = "purge.lambda_handler"
   runtime = "python2.7"
   source_code_hash = "${base64sha256(file(data.archive_file.lambda_purge.output_path))}"
+  environment {
+    variables =
+      {
+          TFKEY = "${var.tf_key}"
+      }
+  }
 }
 
 resource "aws_iam_role" "lambda_exec" {
