@@ -18,18 +18,18 @@ Parameters:
        Type: String
        Default: "7"
 Resources:
-  ISCBackupInstanceFunction:
+  basenubeBackupInstanceFunction:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: !Sub ${EnvironmentName}_isc_backup_instances
+      FunctionName: !Sub ${EnvironmentName}_basenube_backup_instances
       Timeout: 60
       Handler: index.lambda_handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Code:
         ZipFile: !Sub |
-          # ISC Instance Automated AMI Backups
+          # basenube AWS Instance Backup and Image Purge
           #
-          # @author ron.sweeney@integrationrequired.com
+          # @author ron@basenube.com
           #
           # This script will search for all instances having a tag with "Backup" or "backup"
           # on it. As soon as we have the instances list, we loop through each instance
@@ -80,7 +80,7 @@ Resources:
                       create_time = datetime.datetime.now()
                       create_fmt = create_time.strftime('%Y-%m-%d')
       
-                      AMIid = ec.create_image(InstanceId=instance['InstanceId'], Name="ISC AMI Backup - " + instance['InstanceId'] + " from " + create_fmt, Description="Lambda created AMI of instance " + instance['InstanceId'] + " from " + create_fmt, NoReboot=True, DryRun=False)
+                      AMIid = ec.create_image(InstanceId=instance['InstanceId'], Name="basenube AMI Backup - " + instance['InstanceId'] + " from " + create_fmt, Description="Lambda created AMI of instance " + instance['InstanceId'] + " from " + create_fmt, NoReboot=True, DryRun=False)
       
                       instanceTag = ec2.Instance(instance['InstanceId'])
                       tags = instanceTag.tags or []
@@ -113,16 +113,16 @@ Resources:
                       ]
                   )
       Runtime: python2.7
-  ISCDeleteAMIFunction:
+  basenubeDeleteAMIFunction:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: !Sub ${EnvironmentName}_isc_delete_amis
+      FunctionName: !Sub ${EnvironmentName}_basenube_delete_amis
       Handler: index.lambda_handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Timeout: 60
       Code:
         ZipFile: !Sub |
-          # ISC Automated AMI and Snapshot Deletion
+          # basenube Automated AMI and Snapshot Deletion
           
           import boto3
           import collections
@@ -166,7 +166,7 @@ Resources:
 
                   for image in images:
  
-                      if image.name.startswith('ISC AMI Backup - ' + instance['InstanceId']):
+                      if image.name.startswith('basenube AMI Backup - ' + instance['InstanceId']):
 
                           imagecount = imagecount + 1
           
@@ -236,7 +236,7 @@ Resources:
           - sts:AssumeRole
       Path: "/"
       Policies:
-      - PolicyName: ISCBackUpPolicy
+      - PolicyName: basenubeBackUpPolicy
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
@@ -252,8 +252,8 @@ Resources:
       State: "ENABLED"
       Targets: 
         - 
-          Arn: !GetAtt ISCBackupInstanceFunction.Arn
-          Id: !Ref ISCBackupInstanceFunction
+          Arn: !GetAtt basenubeBackupInstanceFunction.Arn
+          Id: !Ref basenubeBackupInstanceFunction
   ScheduledRuleforDeletion: 
     Type: "AWS::Events::Rule"
     Properties: 
@@ -262,19 +262,19 @@ Resources:
       State: "ENABLED"
       Targets: 
         - 
-          Arn: !GetAtt ISCDeleteAMIFunction.Arn
-          Id: !Ref ISCDeleteAMIFunction
+          Arn: !GetAtt basenubeDeleteAMIFunction.Arn
+          Id: !Ref basenubeDeleteAMIFunction
   PermissionForEventsToInvokeLambdaBackup: 
     Type: "AWS::Lambda::Permission"
     Properties: 
-      FunctionName: !Ref ISCBackupInstanceFunction
+      FunctionName: !Ref basenubeBackupInstanceFunction
       Action: "lambda:InvokeFunction"
       Principal: "events.amazonaws.com"
       SourceArn: !GetAtt ScheduledRuleforBackup.Arn
   PermissionForEventsToInvokeLambdaDelete: 
     Type: "AWS::Lambda::Permission"
     Properties: 
-      FunctionName: !Ref ISCDeleteAMIFunction
+      FunctionName: !Ref basenubeDeleteAMIFunction
       Action: "lambda:InvokeFunction"
       Principal: "events.amazonaws.com"
       SourceArn: !GetAtt ScheduledRuleforDeletion.Arn 
