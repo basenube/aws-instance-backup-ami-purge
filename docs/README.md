@@ -47,7 +47,7 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 Please make sure to update tests as appropriate.
 
 ## Author
-Contains stolen gists glued together with Stack Overflow an HCL by Ron Sweeney <ron@basenube.com>
+Contains stolen gists glued together with Stack Overflow and HCL by Ron Sweeney <ron@basenube.com>
 
 ## License
 [![License](https://img.shields.io/github/license/basenube/aws-instance-backup-ami-purge.svg?style=social)](https://github.com/basenube/aws-instance-backup-ami-purge)  
