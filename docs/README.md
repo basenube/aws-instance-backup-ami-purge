@@ -1,18 +1,19 @@
 
 ![gaze](https://www.basenube.com/archive/assets/images/basenube.png)
 
-# Terraform AWS EC2 Instance Backup an AMI Purge
+[![made-with-terraform](https://img.shields.io/badge/Made%20with-Terraform-1f425f.svg)](https://www.terraform.io/)
+
+
+## Terraform AWS EC2 Instance Backup an AMI Purge
 
 A Terraform plan that will deploy a set of resources that will...
 
 ...search for all instances having a tag with "Backup" or "backup"
 on it. As soon as we have the instances list, we loop through each instance
-and create an AMI of it. Also, it will look for a "Retention" tag key which
-will be used as a retention policy number in days. If there is no tag with
-that name, it will use a 7 days default value for each AMI.  After creating the AMI 
+and create an AMI of it. After creating the AMI 
 it creates a "DeleteOn" tag on the AMI indicating when it will be deleted using the Retention value and another Lambda function will...
 
-...delete that AMI.
+...delete (or de-register) that AMI.
 
 This results in a repository of AMI's with a retention for 7 days.
 
@@ -49,4 +50,5 @@ Please make sure to update tests as appropriate.
 Contains stolen gists glued together with Stack Overflow an HCL by Ron Sweeney <ron@basenube.com>
 
 ## License
+[![License](https://img.shields.io/github/license/basenube/aws-instance-backup-ami-purge.svg?style=social)](https://github.com/basenube/aws-instance-backup-ami-purge)  
 [MIT](https://choosealicense.com/licenses/mit/)
