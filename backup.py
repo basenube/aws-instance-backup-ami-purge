@@ -50,7 +50,7 @@ def lambda_handler(event, context):
             create_time = datetime.datetime.now()
             create_fmt = create_time.strftime('%Y-%m-%d')
 
-            AMIid = ec.create_image(InstanceId=instance['InstanceId'], Name="AMI Backup - " + instance['InstanceId'] + " from " + create_fmt, Description="Lambda created AMI of instance " + instance['InstanceId'] + " from " + create_fmt, NoReboot=True, DryRun=False)
+            AMIid = ec.create_image(InstanceId=instance['InstanceId'], Name=os.environ['variable'] + Backup - " + instance['InstanceId'] + " from " + create_fmt, Description="Lambda created AMI of instance " + instance['InstanceId'] + " from " + create_fmt, NoReboot=True, DryRun=False)
 
         
             pprint.pprint(instance)

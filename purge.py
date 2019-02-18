@@ -45,7 +45,7 @@ def lambda_handler(event, context):
 
         for image in images:
 
-            if image.name.startswith('AMI Backup - ' + instance['InstanceId']):
+            if image.name.startswith(os.environ['variable'] + Backup - ' + instance['InstanceId']):
 
                 imagecount = imagecount + 1
 
