@@ -1,5 +1,5 @@
 
-![gaze](https://www.basenube.com/archive/img/basenube.png)
+![gaze](https://www.basenube.com/archive/assets/images/basenube.png)
 
 # Terraform AWS EC2 Instance Backup an AMI Purge
 
