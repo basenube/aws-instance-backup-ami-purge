@@ -1,4 +1,4 @@
-![gaze](https://www.basenube.com/archive/assets/images/basenube.png)
+![gaze](https://www.basenube.com/archive/assets/images/basenube-github.png)
 
 [![made-with-terraform](https://img.shields.io/badge/Made%20with-Terraform-1f425f.svg)](https://www.terraform.io/)  
 ## Terraform AWS EC2 Instance Backup and AMI Purge
