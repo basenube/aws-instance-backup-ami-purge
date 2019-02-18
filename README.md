@@ -33,13 +33,17 @@ terraform plan
 terraform apply
 ```
 
+## Legacy
+There is also a [Cloudformation Version](https://github.com/basenube/aws-instance-backup-ami-purge/blob/master/cloudformation/basenube-aws-instance-backup-ami-purge-stack.yaml) of this included in case you dont Terraform.
+
+
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
 Please make sure to update tests as appropriate.
 
 ## Author
-Stolen gists an glued together with Stack Overflow by Ron Sweeney <ron@basenube.com>
+Contains stolen gists glued together with Stack Overflow an HCL by Ron Sweeney <ron@basenube.com>
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
